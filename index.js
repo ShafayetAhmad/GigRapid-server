@@ -74,7 +74,11 @@ async function run() {
       res.send(jobDetails);
     });
 
-    
+    app.post("/storeBidData", async (req, res) => {
+      const bidData = req.body;
+      const result = await bidsCollection.insertOne(bidData);
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
