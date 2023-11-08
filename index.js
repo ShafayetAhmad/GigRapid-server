@@ -50,7 +50,11 @@ async function run() {
       console.log(`A user inserted with the _id: ${result.insertedId}`);
     });
 
-    
+    app.get("/getUser", async (req, res) => {
+      const email = req.query.email;
+      const result = await usersCollection.findOne({ userEmail: email });
+      res.send(result);
+    });
 
    
 
