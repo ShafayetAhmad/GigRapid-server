@@ -56,7 +56,15 @@ async function run() {
       res.send(result);
     });
 
-   
+    app.get("/getTabData", async (req, res) => {
+      const category = req.query.Category;
+      const categoryData = await jobsCollection
+        .find({ JobCategory: category })
+        .toArray();
+      res.send(categoryData);
+
+      console.log("line 64", categoryData);
+    });
 
     
 
