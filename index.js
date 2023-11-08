@@ -43,7 +43,12 @@ async function run() {
       res.send(result);
     });
 
-    
+    app.post("/add-user", async (req, res) => {
+      const userDetails = req.body.userDetails;
+      console.log(userDetails);
+      const result = await usersCollection.insertOne(userDetails);
+      console.log(`A user inserted with the _id: ${result.insertedId}`);
+    });
 
     
 
