@@ -37,23 +37,24 @@ async function run() {
 
     app.post("/add-job", async (req, res) => {
       const jobDetails = req.body;
-      console.log(jobDetails);
       const result = await jobsCollection.insertOne(jobDetails);
-      console.log(`A document was inserted with the _id: ${result.insertedId}`);
+
       res.send(result);
     });
 
     app.post("/add-user", async (req, res) => {
       const userDetails = req.body.userDetails;
-      console.log(userDetails);
+
       const result = await usersCollection.insertOne(userDetails);
-      console.log(`A user inserted with the _id: ${result.insertedId}`);
     });
 
     app.get("/getUser", async (req, res) => {
       const email = req.query.email;
       const result = await usersCollection.findOne({ userEmail: email });
       res.send(result);
+    });
+    app.get("/getHello", (req, res) => {
+      res.send("hello");
     });
 
     app.get("/getTabData", async (req, res) => {
@@ -62,8 +63,6 @@ async function run() {
         .find({ JobCategory: category })
         .toArray();
       res.send(categoryData);
-
-      console.log("line 64", categoryData);
     });
 
     app.get("/singleJobData", async (req, res) => {
@@ -77,6 +76,31 @@ async function run() {
     app.post("/storeBidData", async (req, res) => {
       const bidData = req.body;
       const result = await bidsCollection.insertOne(bidData);
+      res.send(result);
+    });
+
+    app.get("/getMyPostedJobs", async (req, res) => {
+      const email = req.query.email;
+      const result = await jobsCollection
+        .find({ JobOwnerEmail: email })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/getMyBids", async (req, res) => {
+      const email = req.query.email;
+      const bids = await bidsCollection.find({ Seller: email }).toArray();
+      console.log(bids);
+      res.send(bids);
+    });
+
+    app.post("/update-job", async (req, res) => {
+      const id = req.body.JobId;
+      const jobDetails = req.body.JobDetails;
+      const result = await jobsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: jobDetails }
+      );
       res.send(result);
     });
   } finally {
