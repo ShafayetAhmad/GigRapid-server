@@ -66,7 +66,13 @@ async function run() {
       console.log("line 64", categoryData);
     });
 
-    
+    app.get("/singleJobData", async (req, res) => {
+      const id = req.query.id;
+      const jobDetails = await jobsCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      res.send(jobDetails);
+    });
 
     
   } finally {
