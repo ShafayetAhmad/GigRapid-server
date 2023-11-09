@@ -1,13 +1,40 @@
 const express = require("express");
 const cors = require("cors");
+const cookieparser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
+const jwt = require("jsonwebtoken");
 //middlewares
 app.use(express.json());
-app.use(cors());
+app.use(cookieparser());
+app.use(
+  cors({
+    origin: ["https://gigrapid.web.app", "http://localhost:5173"],
+    credentials: true,
+  })
+);
+
+const logger = (req, res, next) => {
+  console.log("log info", req.method, req.url);
+  
+};
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  console.log("token in middleware", token);
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ez5uydg.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -23,7 +50,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -34,6 +61,28 @@ async function run() {
     const jobsCollection = gigRapidDB.collection("jobsCollection");
     const usersCollection = gigRapidDB.collection("usersCollection");
     const bidsCollection = gigRapidDB.collection("bidsCollection");
+
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      console.log("user token for", user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "8h",
+      });
+
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ success: true });
+    });
+
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logged user", user);
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+    });
 
     app.post("/add-job", async (req, res) => {
       const jobDetails = req.body;
@@ -75,7 +124,9 @@ async function run() {
 
     app.post("/storeBidData", async (req, res) => {
       const bidData = req.body;
+      console.log(bidData);
       const result = await bidsCollection.insertOne(bidData);
+      console.log(result);
       res.send(result);
     });
 
@@ -87,10 +138,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/getMyBids", async (req, res) => {
+    app.get("/getMyBids", logger,verifyToken, async (req, res) => {
       const email = req.query.email;
-      const bids = await bidsCollection.find({ Seller: email }).toArray();
-      console.log(bids);
+      console.log('token owner info', req.user)
+      const bids = await bidsCollection
+        .find({ Seller: email })
+        .sort({ Status: 1 })
+        .toArray();
+
       res.send(bids);
     });
 
@@ -101,6 +156,59 @@ async function run() {
         { _id: new ObjectId(id) },
         { $set: jobDetails }
       );
+      res.send(result);
+    });
+
+    app.delete("/deleteJob", async (req, res) => {
+      const id = req.query.jobId;
+      const result = jobsCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    app.get("/getBidderList", async (req, res) => {
+      const id = req.query.jobId;
+      const result = await bidsCollection.find({ JobId: id }).toArray();
+      // console.log(id);
+      // console.log("line 118", result);
+      res.send(result);
+    });
+
+    app.post("/bidderAccept", async (req, res) => {
+      const id = req.body.id;
+      const verdict = req.body.verdict;
+      console.log(id, verdict);
+      if (verdict === "rejected") {
+        const result = await bidsCollection.updateMany(
+          { JobId: id },
+          { $set: { Status: "canceled" } }
+        );
+        console.log(result);
+        res.send(result);
+      } else if (verdict === "accepted") {
+        const result = await bidsCollection.updateMany(
+          { JobId: id },
+          { $set: { Status: "in progress" } }
+        );
+        console.log(result);
+        res.send(result);
+      }
+    });
+
+    app.post("/taskCompleted", async (req, res) => {
+      const id = req.body.jobId;
+      const completed = req.body.completed;
+      if (completed) {
+        const result = await bidsCollection.updateMany(
+          { JobId: id },
+          { $set: { Status: "Completed" } }
+        );
+        res.send(result);
+      }
+    });
+
+    app.get("/getBidRequests", async (req, res) => {
+      const email = req.query.email;
+      const result = await bidsCollection.find({ Buyer: email }).toArray();
       res.send(result);
     });
   } finally {
