@@ -1,14 +1,14 @@
 const express = require("express");
 const cors = require("cors");
-const cookieparser = require("cookie-parser");
+// const cookieparser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const jwt = require("jsonwebtoken");
+// const jwt = require("jsonwebtoken");
 //middlewares
 app.use(express.json());
-app.use(cookieparser());
+// app.use(cookieparser());
 app.use(
   cors({
     origin: ["https://gigrapid.web.app", "http://localhost:5173"],
@@ -16,25 +16,25 @@ app.use(
   })
 );
 
-const logger = (req, res, next) => {
-  console.log("log info", req.method, req.url);
-  
-};
+// const logger = (req, res, next) => {
+//   console.log("log info", req.method, req.url);
 
-const verifyToken = (req, res, next) => {
-  const token = req?.cookies?.token;
-  console.log("token in middleware", token);
-  if (!token) {
-    return res.status(401).send({ message: "unauthorized" });
-  }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: "unauthorized" });
-    }
-    req.user = decoded;
-    next();
-  });
-};
+// };
+
+// const verifyToken = (req, res, next) => {
+//   const token = req?.cookies?.token;
+//   console.log("token in middleware", token);
+//   if (!token) {
+//     return res.status(401).send({ message: "unauthorized" });
+//   }
+//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+//     if (err) {
+//       return res.status(401).send({ message: "unauthorized" });
+//     }
+//     req.user = decoded;
+//     next();
+//   });
+// };
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ez5uydg.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -52,7 +52,6 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -62,26 +61,27 @@ async function run() {
     const usersCollection = gigRapidDB.collection("usersCollection");
     const bidsCollection = gigRapidDB.collection("bidsCollection");
 
-    app.post("/jwt", async (req, res) => {
-      const user = req.body;
-      console.log("user token for", user);
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "8h",
-      });
+    // app.post("/jwt", async (req, res) => {
+    //   const user = req.body;
+    //   console.log("user token for", user);
+    //   const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+    //     expiresIn: "8h",
+    //   });
 
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-        })
-        .send({ success: true });
-    });
+    //   res
+    //     .cookie("token", token, {
+    //       httpOnly: true,
+    //       secure: true,
+    //       sameSite: "none",
+    //     })
+    //     .send({ success: true });
+    // });
 
     app.post("/logout", async (req, res) => {
       const user = req.body;
       console.log("logged user", user);
-      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+      // res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+      res.send({ success: true });
     });
 
     app.post("/add-job", async (req, res) => {
@@ -95,6 +95,7 @@ async function run() {
       const userDetails = req.body.userDetails;
 
       const result = await usersCollection.insertOne(userDetails);
+      res.send(result);
     });
 
     app.get("/getUser", async (req, res) => {
@@ -138,9 +139,9 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/getMyBids", logger,verifyToken, async (req, res) => {
+    app.get("/getMyBids", async (req, res) => {
       const email = req.query.email;
-      console.log('token owner info', req.user)
+      console.log("token owner info", req.user);
       const bids = await bidsCollection
         .find({ Seller: email })
         .sort({ Status: 1 })
