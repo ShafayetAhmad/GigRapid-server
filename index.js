@@ -212,6 +212,12 @@ async function run() {
       const result = await bidsCollection.find({ Buyer: email }).toArray();
       res.send(result);
     });
+
+    app.get("/getAllJobs", async (req, res) => {
+      const result = await jobsCollection.find({}).toArray();
+      console.log(result);
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
